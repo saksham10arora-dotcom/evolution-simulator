@@ -1,0 +1,17 @@
+{
+  "name": "evolution-simulator",
+  "version": "1.0.0",
+  "description": "A-Life Neural Network Evolution Simulator sandbox.",
+  "scripts": {
+    "dev": "npx -y vite@latest --port 3000 --open"
+  },
+  "keywords": [
+    "artificial-life",
+    "evolution",
+    "simulation",
+    "neural-network",
+    "genetic-algorithm"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}
