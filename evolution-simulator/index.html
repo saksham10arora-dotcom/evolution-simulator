@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A-Life Evolution Simulator - Petri Dish Sandbox</title>
+  <meta name="description" content="Explore real-time natural selection in a browser-based artificial life simulator. Seed creatures with neural network brains, mutate their genomes, and play god in a dynamic ecological sandbox.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Container for the entire application layout -->
+  <div id="app-container">
+    
+    <!-- Top Header Panel -->
+    <header id="app-header">
+      <div class="logo-area">
+        <span class="icon">🧬</span>
+        <h1>A-Life Evolution Simulator</h1>
+        <span class="badge" id="sim-status-badge">SANDBOX ACTIVE</span>
+      </div>
+      <div class="header-stats">
+        <div class="header-stat-box">
+          <span class="label">Total Population</span>
+          <span class="value" id="header-pop-count">0</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Avg Generation</span>
+          <span class="value" id="header-avg-gen">0</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Highest Gen</span>
+          <span class="value" id="header-max-gen">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main id="app-body">
+      
+      <!-- Left Control & Configuration Panel -->
+      <aside id="sidebar-controls" aria-label="Simulation Controls">
+        <!-- Playback Panel -->
+        <section class="control-card" id="playback-card">
+          <h2>Playback & Speed</h2>
+          <div class="button-row">
+            <button id="btn-toggle-play" class="btn btn-primary" title="Toggle simulation run state">
+              <span class="btn-icon">⏸</span> <span id="text-toggle-play">Pause</span>
+            </button>
+            <button id="btn-reset" class="btn btn-danger" title="Clear all and restart simulation">
+              <span class="btn-icon">🔄</span> Reset
+            </button>
+          </div>
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-speed">Simulation Speed</label>
+              <span class="control-val" id="val-speed">1x</span>
+            </div>
+            <input type="range" id="slider-speed" min="1" max="10" value="1" step="1" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1">
+          </div>
+        </section>
+
+        <!-- God Mode Tools -->
+        <section class="control-card" id="god-tools-card">
+          <h2>Sandbox Tools</h2>
+          <div class="tool-select-grid">
+            <button id="tool-inspect" class="tool-btn active" data-tool="inspect" title="Select and inspect an organism">
+              <span class="tool-icon">🔍</span> Inspect
+            </button>
+            <button id="tool-draw-wall" class="tool-btn" data-tool="wall" title="Draw obstacle walls on the petri dish">
+              <span class="tool-icon">🧱</span> Draw Walls
+            </button>
+            <button id="tool-spawn-food" class="tool-btn" data-tool="food" title="Click on simulation to spawn plants">
+              <span class="tool-icon">🌱</span> Spawn Plants
+            </button>
+            <button id="tool-spawn-meat" class="tool-btn" data-tool="meat" title="Click on simulation to drop meat">
+              <span class="tool-icon">🥩</span> Drop Meat
+            </button>
+            <button id="tool-spawn-creature" class="tool-btn" data-tool="creature" title="Spawn a random creature where clicked">
+              <span class="tool-icon">👾</span> Spawn Creature
+            </button>
+            <button id="tool-clear-walls" class="tool-btn danger" title="Clear all drawn obstacle walls">
+              <span class="tool-icon">🧹</span> Clear Walls
+            </button>
+          </div>
+
+          <div class="action-buttons-stack">
+            <button id="btn-plague" class="btn btn-warning btn-block" title="Instantly reduce all organisms' energy by 50%">
+              ☣️ Unleash Pathogen (Plague)
+            </button>
+            <button id="btn-extinction" class="btn btn-danger btn-block" title="Kill all organisms except the selected one">
+              ☄️ Trigger Extinction Event
+            </button>
+          </div>
+        </section>
+
+        <!-- Environmental Settings -->
+        <section class="control-card" id="env-settings-card">
+          <h2>Environment Physics</h2>
+          
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-target-pop">Target Minimum Pop</label>
+              <span class="control-val" id="val-target-pop">40</span>
+            </div>
+            <input type="range" id="slider-target-pop" min="10" max="100" value="40" aria-valuemin="10" aria-valuemax="100" aria-valuenow="40">
+            <span class="help-text">Auto-spawns random ancestors if population falls below this.</span>
+          </div>
+
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-plant-rate">Plant Spawn Rate</label>
+              <span class="control-val" id="val-plant-rate">0.5</span>
+            </div>
+            <input type="range" id="slider-plant-rate" min="0" max="2" value="0.5" step="0.1" aria-valuemin="0" aria-valuemax="2" aria-valuenow="0.5">
+          </div>
+
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-mutation-rate">Mutation Rate</label>
+              <span class="control-val" id="val-mutation-rate">10%</span>
+            </div>
+            <input type="range" id="slider-mutation-rate" min="1" max="50" value="10" step="1" aria-valuemin="1" aria-valuemax="50" aria-valuenow="10">
+          </div>
+        </section>
+      </aside>
+
+      <!-- Center Petri Dish Canvas Container -->
+      <section id="petri-container" aria-label="Simulation Canvas">
+        <div class="canvas-wrapper">
+          <canvas id="simulation-canvas"></canvas>
+          <div id="canvas-overlay-message" class="hidden">Simulation Paused</div>
+        </div>
+        
+        <!-- Floating Canvas Controls -->
+        <div id="floating-canvas-controls">
+          <button id="float-btn-zoom-in" class="float-btn" title="Zoom In">+</button>
+          <button id="float-btn-zoom-out" class="float-btn" title="Zoom Out">-</button>
+          <button id="float-btn-zoom-reset" class="float-btn" title="Reset Zoom">🎯</button>
+        </div>
+      </section>
+
+      <!-- Right Inspection & Statistics Panel -->
+      <aside id="sidebar-stats" aria-label="Simulation Statistics">
+        <!-- Live Ecological Summary -->
+        <section class="stats-card" id="eco-summary-card">
+          <h2>Ecosystem Summary</h2>
+          <div class="eco-bars">
+            <div class="eco-bar-container">
+              <div class="eco-bar-label">
+                <span>Herbivores</span>
+                <span id="label-herbivore-count">0</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill herbivore" id="bar-herbivore-percent" style="width: 0%;"></div>
+              </div>
+            </div>
+            <div class="eco-bar-container">
+              <div class="eco-bar-label">
+                <span>Carnivores</span>
+                <span id="label-carnivore-count">0</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill carnivore" id="bar-carnivore-percent" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid-stats">
+            <div class="grid-stat-item">
+              <span class="stat-lbl">Births</span>
+              <span class="stat-val" id="stat-births">0</span>
+            </div>
+            <div class="grid-stat-item">
+              <span class="stat-lbl">Deaths</span>
+              <span class="stat-val" id="stat-deaths">0</span>
+            </div>
+            <div class="grid-stat-item">
+              <span class="stat-lbl">Simulation Steps</span>
+              <span class="stat-val" id="stat-steps">0</span>
+            </div>
+            <div class="grid-stat-item">
+              <span class="stat-lbl">FPS</span>
+              <span class="stat-val" id="stat-fps">0</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Selected Creature Detail View -->
+        <section class="stats-card" id="creature-detail-card">
+          <h2>Organism Inspector</h2>
+          <div id="inspector-placeholder">
+            <p>Click on any moving creature in the petri dish to inspect its properties, genes, and live neural network.</p>
+          </div>
+          
+          <div id="inspector-content" class="hidden">
+            <div class="creature-header">
+              <div class="creature-color-indicator" id="inspect-color"></div>
+              <div>
+                <h3 id="inspect-name">Creature Name</h3>
+                <span class="subtext" id="inspect-species-label">Species: Unknown</span>
+              </div>
+            </div>
+
+            <!-- Energy & Age Progress -->
+            <div class="inspect-vitals">
+              <div class="vital-row">
+                <span class="vital-lbl">Energy</span>
+                <div class="progress-track vital">
+                  <div class="progress-fill energy" id="inspect-energy-bar" style="width: 100%;"></div>
+                </div>
+                <span class="vital-val" id="inspect-energy-val">100/100</span>
+              </div>
+              <div class="vital-row">
+                <span class="vital-lbl">Age</span>
+                <div class="progress-track vital">
+                  <div class="progress-fill age" id="inspect-age-bar" style="width: 0%;"></div>
+                </div>
+                <span class="vital-val" id="inspect-age-val">0/1000</span>
+              </div>
+            </div>
+
+            <!-- Genotype / Phenotype traits -->
+            <div class="inspect-table-wrapper">
+              <table class="inspect-table">
+                <thead>
+                  <tr>
+                    <th>Trait</th>
+                    <th>Genetic Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Diet type</td>
+                    <td id="inspect-trait-diet">Herbivore</td>
+                  </tr>
+                  <tr>
+                    <td>Size (radius)</td>
+                    <td id="inspect-trait-size">8px</td>
+                  </tr>
+                  <tr>
+                    <td>Max Speed</td>
+                    <td id="inspect-trait-speed">3.0 px/s</td>
+                  </tr>
+                  <tr>
+                    <td>Sensory Range</td>
+                    <td id="inspect-trait-sense">150px</td>
+                  </tr>
+                  <tr>
+                    <td>Generation</td>
+                    <td id="inspect-trait-gen">1</td>
+                  </tr>
+                  <tr>
+                    <td>Offspring count</td>
+                    <td id="inspect-trait-kids">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Interactive Actions -->
+            <div class="inspector-actions">
+              <button id="btn-inspect-clone" class="btn btn-warning btn-sm">🧬 Clone</button>
+              <button id="btn-inspect-kill" class="btn btn-danger btn-sm">💀 Terminate</button>
+              <button id="btn-inspect-follow" class="btn btn-primary btn-sm">🎯 Follow</button>
+            </div>
+
+            <!-- Neural Network Visualizer -->
+            <div class="nn-visualizer-container">
+              <h4>Neural Network (Live Activity)</h4>
+              <canvas id="nn-canvas" width="280" height="220"></canvas>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+    </main>
+
+    <!-- Bottom Analytics Dashboard -->
+    <footer id="app-footer">
+      <div class="footer-panel" id="species-chart-panel">
+        <div class="panel-header">
+          <h2>Real-Time Species Population over Time</h2>
+          <span class="help-text">Shows active species lineages diverging and evolving.</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="species-chart" height="90"></canvas>
+        </div>
+      </div>
+      
+      <!-- Collapsible Active Species List -->
+      <div class="footer-panel" id="species-list-panel">
+        <div class="panel-header">
+          <h2>Active Species Lineages</h2>
+        </div>
+        <div class="species-chips-container" id="species-list-container">
+          <!-- Populated dynamically via JS -->
+          <div class="no-species">Waiting for simulation data...</div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Loading scripts -->
+  <script src="simulation.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

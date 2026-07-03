@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assembly Biosphere - Self-Coding A-Life Sandbox</title>
+  <meta name="description" content="Witness the evolution of executable code. Seed a grid biosphere with assembly-programmed robots that mutate, attack, cooperate, and exchange instructions.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- Top Header -->
+    <header id="app-header">
+      <div class="logo-area">
+        <span class="icon">🧪</span>
+        <h1>Assembly Biosphere</h1>
+        <span class="badge" id="sim-status-badge">CODE INTERPRETER ACTIVE</span>
+      </div>
+      <div class="header-stats">
+        <div class="header-stat-box">
+          <span class="label">Living Entities</span>
+          <span class="value" id="header-pop-count">0</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Energy Plants</span>
+          <span class="value" id="header-food-count">0</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Evolutions/Mutations</span>
+          <span class="value" id="header-mutations">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main id="app-body">
+      
+      <!-- Left Sidebar: Controls & Physics Configs -->
+      <aside id="sidebar-controls" aria-label="Controls & Configurations">
+        
+        <!-- Playback Panel -->
+        <section class="control-card" id="playback-card">
+          <h2>Playback & Speed</h2>
+          <div class="button-row">
+            <button id="btn-toggle-play" class="btn btn-primary" title="Toggle run state">
+              <span class="btn-icon">⏸</span> <span id="text-toggle-play">Pause</span>
+            </button>
+            <button id="btn-reset" class="btn btn-danger" title="Reset Simulation">
+              <span class="btn-icon">🔄</span> Reset
+            </button>
+          </div>
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-speed">Simulation Speed</label>
+              <span class="control-val" id="val-speed">1x</span>
+            </div>
+            <input type="range" id="slider-speed" min="1" max="15" value="1" step="1" aria-valuemin="1" aria-valuemax="15" aria-valuenow="1">
+          </div>
+        </section>
+
+        <!-- God mode triggers -->
+        <section class="control-card" id="god-tools-card">
+          <h2>Sandbox Spawners</h2>
+          <div class="tool-select-grid">
+            <button id="tool-inspect" class="tool-btn active" data-tool="inspect" title="Inspect Robot">
+              <span class="tool-icon">🔍</span> Inspect
+            </button>
+            <button id="tool-spawn-food" class="tool-btn" data-tool="food" title="Click to spawn energy cell">
+              <span class="tool-icon">🌱</span> Drop Food
+            </button>
+            <button id="tool-spawn-ancestor" class="tool-btn" data-tool="ancestor" title="Click to place Ancestor Robot">
+              <span class="tool-icon">🤖</span> Add Robot
+            </button>
+            <button id="tool-spawn-wall" class="tool-btn" data-tool="wall" title="Place static barrier">
+              <span class="tool-icon">🧱</span> Block Wall
+            </button>
+          </div>
+          <div class="action-buttons-stack" style="margin-top: 0.5rem;">
+            <button id="btn-clear-walls" class="btn btn-danger btn-block">🧹 Wipe All Barrier Walls</button>
+            <button id="btn-inject-mutation" class="btn btn-warning btn-block">⚡ Induce Radiation Burst</button>
+          </div>
+        </section>
+
+        <!-- Physics Sliders -->
+        <section class="control-card" id="configs-card">
+          <h2>Biosphere Physics</h2>
+          
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-target-pop">Min Population</label>
+              <span class="control-val" id="val-target-pop">25</span>
+            </div>
+            <input type="range" id="slider-target-pop" min="5" max="80" value="25" aria-valuemin="5" aria-valuemax="80" aria-valuenow="25">
+          </div>
+
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-food-spawn">Food Spawn Density</label>
+              <span class="control-val" id="val-food-spawn">0.4</span>
+            </div>
+            <input type="range" id="slider-food-spawn" min="0.0" max="1.5" value="0.4" step="0.1" aria-valuemin="0.0" aria-valuemax="1.5" aria-valuenow="0.4">
+          </div>
+
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-mutation">Copy Mutation Rate</label>
+              <span class="control-val" id="val-mutation">12%</span>
+            </div>
+            <input type="range" id="slider-mutation" min="1" max="50" value="12" step="1" aria-valuemin="1" aria-valuemax="50" aria-valuenow="12">
+          </div>
+        </section>
+      </aside>
+
+      <!-- Center Biosphere Canvas -->
+      <section id="grid-container" aria-label="Biosphere Board">
+        <div class="canvas-wrapper">
+          <canvas id="biosphere-canvas"></canvas>
+          <div id="canvas-overlay-message" class="hidden">Interpreter Paused</div>
+        </div>
+      </section>
+
+      <!-- Right Sidebar: Interactive Code IDE & Inspector -->
+      <aside id="sidebar-inspector" aria-label="Assembler Code Inspector">
+        <section class="control-card" id="inspector-card">
+          <h2>Compiler Inspector</h2>
+          
+          <div id="inspector-placeholder">
+            <p>Click on any programmed robot in the grid to inspect its current instruction index, registers, and program code memory.</p>
+          </div>
+
+          <div id="inspector-content" class="hidden">
+            <!-- Vitals Grid -->
+            <div class="robot-header">
+              <div class="robot-icon-indicator" id="inspect-icon">🤖</div>
+              <div>
+                <h3 id="inspect-id">Entity ID: #abc</h3>
+                <span class="subtext" id="inspect-age-label">Age: 0 frames</span>
+              </div>
+            </div>
+
+            <!-- Registers stats -->
+            <div class="register-grid">
+              <div class="reg-box">
+                <span class="lbl">ENERGY</span>
+                <span class="val" id="inspect-reg-energy">100 / 200</span>
+              </div>
+              <div class="reg-box">
+                <span class="lbl">IP (PTR)</span>
+                <span class="val" id="inspect-reg-ip">0</span>
+              </div>
+              <div class="reg-box">
+                <span class="lbl">R0 (ACC)</span>
+                <span class="val" id="inspect-reg-r0">0</span>
+              </div>
+              <div class="reg-box">
+                <span class="lbl">R1 (SENS)</span>
+                <span class="val" id="inspect-reg-r1">0</span>
+              </div>
+            </div>
+
+            <!-- Live Code Editor IDE -->
+            <div class="ide-wrapper">
+              <div class="ide-header">
+                <span>Memory Program IDE</span>
+                <span class="subtext">Live Execution</span>
+              </div>
+              
+              <!-- Code container (highlights active row via JS) -->
+              <div id="ide-code-lines" class="ide-lines-container">
+                <!-- Loaded dynamically -->
+              </div>
+
+              <!-- Manual Overwrite Textarea -->
+              <div class="ide-footer-editor">
+                <label for="textarea-code">Overwrite Program Code Memory</label>
+                <textarea id="textarea-code" spellcheck="false" placeholder="0: SCAN&#10;1: JE R1 1 5&#10;2: MOVE&#10;3: JUMP 0&#10;4: EAT&#10;5: JUMP 0"></textarea>
+                <button id="btn-write-memory" class="btn btn-primary btn-block btn-sm">
+                  📥 Write to Memory Address
+                </button>
+              </div>
+            </div>
+
+            <div class="inspector-actions" style="margin-top: 0.5rem;">
+              <button id="btn-inspect-kill" class="btn btn-danger btn-sm">💀 Terminate</button>
+              <button id="btn-inspect-mutate" class="btn btn-warning btn-sm">⚡ Mutate Line</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Dynamic Timeline logs -->
+        <section class="control-card" id="log-card">
+          <h2>Mutation Activity log</h2>
+          <div class="timeline-log-container" id="log-container" role="log" aria-live="polite">
+            <div class="log-entry system">Biosphere initialized. Seeded standard ancestor code.</div>
+          </div>
+        </section>
+      </aside>
+
+    </main>
+  </div>
+
+  <script src="biosphere.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

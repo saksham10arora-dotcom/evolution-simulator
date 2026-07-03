@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gravity Warp - N-Body Orbital slingshot</title>
+  <meta name="description" content="Simulate spacetime curvature in an N-body gravity playground. Sling cargo probes around orbiting planets using trajectory prediction lines and real-time gravity well meshes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Header panel -->
+    <header id="app-header">
+      <div class="logo-area">
+        <span class="icon">🪐</span>
+        <h1>Gravity Warp</h1>
+        <span class="badge" id="sim-mode-badge">SANDBOX FREE-PLAY</span>
+      </div>
+      <div class="header-stats">
+        <div class="header-stat-box">
+          <span class="label">Launches</span>
+          <span class="value" id="stat-launches">0</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Delivered Cargo</span>
+          <span class="value" id="stat-delivered">0 / 0</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Active Probes</span>
+          <span class="value" id="stat-active-probes">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main id="app-body">
+      
+      <!-- Left sidebar: Levels & Sandbox physics -->
+      <aside id="sidebar-controls" aria-label="Level Objectives & Physics">
+        <!-- Level Picker -->
+        <section class="control-card" id="levels-card">
+          <h2>Missions</h2>
+          <div class="mission-list" role="group" aria-label="Mission selector">
+            <button class="mission-btn active" data-level="sandbox">🌌 Free Sandbox</button>
+            <button class="mission-btn" data-level="orbit">🌙 Lunar Insertion</button>
+            <button class="mission-btn" data-level="slingshot">🚀 Martian Slingshot</button>
+            <button class="mission-btn" data-level="binary">🌑 Binary Star Dance</button>
+            <button class="mission-btn" data-level="blackhole">🕳️ Event Horizon</button>
+          </div>
+          <div id="mission-info" class="mission-info-box">
+            <h3>Free Sandbox</h3>
+            <p>No objectives. Place planets, adjust their masses, drag them into orbits, and launch probes to test trajectories.</p>
+          </div>
+        </section>
+
+        <!-- Physics Customization -->
+        <section class="control-card" id="physics-card">
+          <h2>spacetime constants</h2>
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-g">Gravity Constant (G)</label>
+              <span class="control-val" id="val-g">1.0</span>
+            </div>
+            <input type="range" id="slider-g" min="0.1" max="3.0" value="1.0" step="0.1" aria-valuemin="0.1" aria-valuemax="3.0" aria-valuenow="1.0">
+          </div>
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-mesh-warp">Warp Visualization</label>
+              <span class="control-val" id="val-mesh-warp">1.5x</span>
+            </div>
+            <input type="range" id="slider-mesh-warp" min="0" max="3" value="1.5" step="0.1" aria-valuemin="0" aria-valuemax="3" aria-valuenow="1.5">
+            <span class="help-text">Visual stretch amplification of the spacetime grid.</span>
+          </div>
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-prediction">Prediction Steps</label>
+              <span class="control-val" id="val-prediction">400</span>
+            </div>
+            <input type="range" id="slider-prediction" min="100" max="800" value="400" step="50" aria-valuemin="100" aria-valuemax="800" aria-valuenow="400">
+          </div>
+        </section>
+      </aside>
+
+      <!-- Center Simulator View -->
+      <section id="sim-container" aria-label="Spacetime canvas">
+        <div class="canvas-wrapper">
+          <canvas id="gravity-canvas"></canvas>
+          <div id="tutorial-overlay">Drag mouse from Launchpad 🚀 to launch cargo probe</div>
+        </div>
+      </section>
+
+      <!-- Right sidebar: Sandbox spawning & Selected Planet details -->
+      <aside id="sidebar-inspector" aria-label="Planet Inspector & Spawning">
+        <section class="control-card" id="spawner-card">
+          <h2>Object Spawner</h2>
+          <p class="help-text">Select object type, then click on the screen to place it.</p>
+          <div class="tool-select-grid">
+            <button id="tool-launchpad" class="tool-btn active" data-tool="aim" title="Launch Probe Mode">
+              <span class="tool-icon">🚀</span> Launch
+            </button>
+            <button id="tool-spawn-planet" class="tool-btn" data-tool="planet" title="Spawn Planet">
+              <span class="tool-icon">⚪</span> Planet
+            </button>
+            <button id="tool-spawn-heavy" class="tool-btn" data-tool="star" title="Spawn Heavy Star">
+              <span class="tool-icon">☀️</span> Star
+            </button>
+            <button id="tool-spawn-bh" class="tool-btn" data-tool="bh" title="Spawn Black Hole">
+              <span class="tool-icon">🕳️</span> Black Hole
+            </button>
+          </div>
+          <div class="button-row">
+            <button id="btn-clear-probes" class="btn btn-warning" title="Clear all cargo probes">🧹 Clear Probes</button>
+            <button id="btn-clear-all" class="btn btn-danger" title="Reset all objects">🔄 Reset Board</button>
+          </div>
+        </section>
+
+        <!-- Selected planet settings -->
+        <section class="control-card" id="inspector-card">
+          <h2>Celestial Inspector</h2>
+          <div id="inspector-placeholder">
+            <p>Click on any planet, star, or black hole to inspect and modify its physics properties.</p>
+          </div>
+          <div id="inspector-content" class="hidden">
+            <div class="planet-header">
+              <div class="planet-color-indicator" id="inspect-color"></div>
+              <div>
+                <h3 id="inspect-name">Planet Alpha</h3>
+                <span class="subtext" id="inspect-type">Type: Body</span>
+              </div>
+            </div>
+            
+            <div class="control-group">
+              <div class="control-header">
+                <label for="slider-planet-mass">Body Mass</label>
+                <span class="control-val" id="val-planet-mass">200</span>
+              </div>
+              <input type="range" id="slider-planet-mass" min="10" max="2500" value="200" step="10">
+            </div>
+
+            <div class="control-group">
+              <div class="control-header">
+                <label>Orbit Controls</label>
+              </div>
+              <div class="button-row" style="margin-top: 0.3rem;">
+                <button id="btn-planet-static" class="btn btn-sm btn-warning">Anchor Body</button>
+                <button id="btn-planet-delete" class="btn btn-sm btn-danger">Destroy</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+    </main>
+  </div>
+
+  <script src="physics.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

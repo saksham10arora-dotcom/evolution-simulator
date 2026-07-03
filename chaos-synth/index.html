@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chaos Synth - 3D Attractor Synthesizer</title>
+  <meta name="description" content="Translate mathematical chaos into ambient music. Interact with Lorenz, Aizawa, and Halvorsen 3D attractors, tweak constants, and hear the system stabilize using Web Audio API.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- Top Header -->
+    <header id="app-header">
+      <div class="logo-area">
+        <span class="icon">🌀</span>
+        <h1>Chaos Synth</h1>
+        <span class="badge" id="synth-status-badge">AUDIO STANDBY</span>
+      </div>
+      <div class="header-stats">
+        <div class="header-stat-box">
+          <span class="label">Attractor Type</span>
+          <span class="value" id="header-attractor-name">Lorenz</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Particles</span>
+          <span class="value" id="header-particle-count">3,000</span>
+        </div>
+        <div class="header-stat-box">
+          <span class="label">Synth Frequency</span>
+          <span class="value" id="header-synth-pitch">0 Hz</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main id="app-body">
+      
+      <!-- Left Sidebar: Attractor Selection & Equations Constants -->
+      <aside id="sidebar-controls" aria-label="Attractor & Equation Constants">
+        
+        <!-- Equation selector -->
+        <section class="control-card" id="selector-card">
+          <h2>Attractor Equations</h2>
+          <div class="equation-selector-stack" role="group" aria-label="Equation selector">
+            <button class="eqn-btn active" data-eqn="lorenz">🌀 Lorenz Attractor</button>
+            <button class="eqn-btn" data-eqn="aizawa">🪐 Aizawa Attractor</button>
+            <button class="eqn-btn" data-eqn="halvorsen">💫 Halvorsen Attractor</button>
+            <button class="eqn-btn" data-eqn="rossler">⚛️ Rössler Attractor</button>
+          </div>
+          <div id="equation-formula" class="formula-display">
+            <!-- Populated dynamically via JS -->
+            <h3>Lorenz Equations</h3>
+            <p class="math">dx = σ(y - x) dt</p>
+            <p class="math">dy = (x(ρ - z) - y) dt</p>
+            <p class="math">dz = (xy - βz) dt</p>
+          </div>
+        </section>
+
+        <!-- Equation Parameters Sliders -->
+        <section class="control-card" id="parameters-card">
+          <h2>Equation Constants</h2>
+          <div id="param-sliders-container">
+            <!-- Sliders are loaded dynamically depending on chosen equation -->
+          </div>
+          <button id="btn-reset-params" class="btn btn-warning btn-block" style="margin-top: 0.5rem;">
+            🔄 Reset Constants
+          </button>
+        </section>
+      </aside>
+
+      <!-- Center Particle Viewport -->
+      <section id="viewport-container" aria-label="Particle Viewport">
+        <div class="canvas-wrapper">
+          <canvas id="chaos-canvas"></canvas>
+          <div id="view-controls-hint">Drag to Rotate 3D Camera • Scroll to Zoom</div>
+        </div>
+      </section>
+
+      <!-- Right Sidebar: Audio Synthesizer Controls -->
+      <aside id="sidebar-synth" aria-label="Synthesizer Control Panel">
+        <!-- Audio Master controls -->
+        <section class="control-card" id="synth-master-card">
+          <h2>Audio Synthesizer</h2>
+          
+          <button id="btn-toggle-audio" class="btn btn-primary btn-block btn-audio-large" title="Initialize audio context">
+            🔊 Enable Audio Probe
+          </button>
+
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-volume">Master Volume</label>
+              <span class="control-val" id="val-volume">70%</span>
+            </div>
+            <input type="range" id="slider-volume" min="0" max="100" value="70" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70">
+          </div>
+        </section>
+
+        <!-- Waveform and Filter settings -->
+        <section class="control-card" id="synth-settings-card">
+          <h2>Sound Modulation</h2>
+          
+          <div class="control-group">
+            <label class="section-label">Oscillator Waveform</label>
+            <div class="waveform-grid">
+              <button class="wave-btn active" data-wave="sine" title="Sine Wave">Sine</button>
+              <button class="wave-btn" data-wave="triangle" title="Triangle Wave">Tri</button>
+              <button class="wave-btn" data-wave="sawtooth" title="Sawtooth Wave">Saw</button>
+              <button class="wave-btn" data-wave="square" title="Square Wave">Square</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-echo">Echo Delay</label>
+              <span class="control-val" id="val-echo">0.3s</span>
+            </div>
+            <input type="range" id="slider-echo" min="0" max="100" value="30" aria-valuemin="0" aria-valuemax="100" aria-valuenow="30">
+          </div>
+
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-resonance">Filter Q (Reso)</label>
+              <span class="control-val" id="val-resonance">3.0</span>
+            </div>
+            <input type="range" id="slider-resonance" min="1" max="15" value="3" step="0.5" aria-valuemin="1" aria-valuemax="15" aria-valuenow="3">
+          </div>
+        </section>
+
+        <!-- Mapping details -->
+        <section class="control-card" id="mapping-card">
+          <h2>Synthesizer Mapping</h2>
+          <table class="mapping-table">
+            <thead>
+              <tr>
+                <th>Attractor</th>
+                <th>Synth Module</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Average X</td>
+                <td>Oscillator Pitch (Hz)</td>
+              </tr>
+              <tr>
+                <td>Average Y</td>
+                <td>Stereo Pan (L ↔ R)</td>
+              </tr>
+              <tr>
+                <td>Average Z</td>
+                <td>Filter Cutoff (Reso)</td>
+              </tr>
+              <tr>
+                <td>Velocity</td>
+                <td>Volume Gate (Gate)</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </aside>
+
+    </main>
+  </div>
+
+  <script src="attractor.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>
